@@ -5,6 +5,7 @@ const http = require('http')
 const server = http.createServer(app)
 const cors = require('cors')
 const { Server } = require('socket.io')
+const { positionsQuestion } = require('./positions')
 app.use(cors())
 const io = require('socket.io')(server, { cors: { origin: "*" } });
 const port = process.env.PORT || 3000
@@ -14,6 +15,8 @@ app.get('/', (req, res) => {
 })
 
 const users = {}
+let questions_actives = positionsQuestion
+console.log(positionsQuestion.length)
 
 io.on('connection', (socket) => {
     socket.on('connec', (name) => {
@@ -28,12 +31,23 @@ io.on('connection', (socket) => {
             }
         }
         io.emit('conn', users)
+        socket.emit('questionsPosition', questions_actives)
     })
 
     socket.on('newPosition', ({ coords }) => {
         users[socket.id].position = coords
         io.emit('positions', users)
     })
+
+    socket.on('QuestionResponse', pos => {
+        // console.log(pos)
+        const newArray = questions_actives.filter((x) => x[0] !== pos[0] && x[1] !== pos[1])
+        questions_actives = newArray
+        // console.log(newArray.length)
+        io.emit('questionsPosition', questions_actives)
+
+    } )
+
     socket.on('disconnect', () => {
         delete users[socket.id]
         console.log('user disconnect', socket.id)
